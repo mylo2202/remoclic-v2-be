@@ -1,9 +1,11 @@
 """Module for abstracting data access to NetCDF files."""
 
 import os
-import xarray as xr
-import urllib.request
 import tempfile
+import urllib.request
+
+import xarray as xr
+
 
 class NetCDFRepository:
     def __init__(self, file_path: str):
@@ -18,11 +20,11 @@ class NetCDFRepository:
             except Exception:
                 # Fallback: Download the raw file locally first
                 fd, temp_path = tempfile.mkstemp(suffix=".nc")
-                os.close(fd) # Close the file descriptor immediately
-                
+                os.close(fd)  # Close the file descriptor immediately
+
                 try:
                     urllib.request.urlretrieve(self.file_path, temp_path)
-                    
+
                     # Open the file, load data into memory, and close file handlers
                     ds = xr.open_dataset(temp_path, decode_times=False)
                     ds.load()
