@@ -37,3 +37,15 @@ async def read_data_at_point(
         return {"variable": variable.value, "value": value}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+@router.get("/forecast")
+async def get_forecast(
+    lat: float = Query(..., description="Latitude"),
+    lng: float = Query(..., description="Longitude"),
+    service: DatasetService = Depends(get_dataset_service)
+):
+    """Get multi-month drought forecast for a location."""
+    try:
+        return service.get_forecast(lat=lat, lng=lng)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
