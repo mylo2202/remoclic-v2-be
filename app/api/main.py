@@ -1,3 +1,5 @@
+"""Main API router module combining all route definitions."""
+
 from fastapi import APIRouter
 
 from app.api.routes import dataset, utils

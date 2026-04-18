@@ -1,3 +1,5 @@
+"""Module for abstracting data access to NetCDF files."""
+
 import os
 import xarray as xr
 import urllib.request
@@ -23,9 +25,9 @@ class NetCDFRepository:
                     
                     # Open the file, load data into memory, and close file handlers
                     ds = xr.open_dataset(temp_path, decode_times=False)
-                    ds.load()  
-                    ds.close() 
-                    
+                    ds.load()
+                    ds.close()
+
                     return ds
                 finally:
                     # Automatically clean up the temporary file from the system

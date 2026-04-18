@@ -1,3 +1,5 @@
+"""Module defining API routes for dataset operations."""
+
 from enum import Enum
 from fastapi import APIRouter, Depends, Query, HTTPException
 from app.api.dependencies import get_dataset_service

@@ -1,5 +1,8 @@
-from app.repositories.netcdf_repository import NetCDFRepository
+"""Module providing core business logic for dataset operations."""
+
 from datetime import datetime
+
+from app.repositories.netcdf_repository import NetCDFRepository
 
 class DatasetService:
     def __init__(self, repository: NetCDFRepository):
@@ -58,8 +61,8 @@ class DatasetService:
             
             try:
                 ref_date = datetime.strptime(ref_date_str, "%Y-%m-%d")
-            except ValueError:
-                raise ValueError(f"Could not parse date '{ref_date_str}' from 'units' attribute: {units}.")
+            except ValueError as exc:
+                raise ValueError(f"Could not parse date '{ref_date_str}' from 'units' attribute: {units}.") from exc
 
             labels = []
             for val in ds['lead'].values:
@@ -85,6 +88,6 @@ class DatasetService:
                 }
             }
         except Exception as e:
-            raise ValueError(f"Error extracting forecast: {str(e)}")
+            raise ValueError(f"Error extracting forecast: {str(e)}") from e
 
 
