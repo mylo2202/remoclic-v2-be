@@ -2,14 +2,13 @@
 
 from fastapi import Depends
 
-from app.core.config import settings
 from app.repositories.netcdf_repository import NetCDFRepository
 from app.services.dataset_service import DatasetService
 
 
 def get_netcdf_repository() -> NetCDFRepository:
-    """Dependency: Initialize the data access layer using the configured file path."""
-    return NetCDFRepository(file_path=settings.FILE_PATH)
+    """Dependency: Initialize the data access layer."""
+    return NetCDFRepository()
 
 
 def get_dataset_service(

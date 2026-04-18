@@ -2,3 +2,6 @@ fastapi
 uvicorn
 xarray
 netCDF4
+pydantic-settings
+python-dotenv
+requests
