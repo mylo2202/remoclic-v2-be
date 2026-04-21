@@ -55,3 +55,26 @@ FastAPI automatically generates beautiful, interactive documentation for your AP
 
 - **Swagger UI (Interactive Testing)**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 - **ReDoc (Alternative Documentation)**: [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc)
+
+## Docker Deployment
+
+You can also run the application using Docker and Docker Compose:
+
+1. **Build the Docker image**:
+```bash
+docker build -t remoclic-be:latest .
+```
+
+2. **Start the container using Docker Compose**:
+```bash
+docker compose up -d
+```
+
+3. **Access the API**:
+The API will be available at [http://localhost:8000](http://localhost:8000).
+
+4. **Check logs**:
+```bash
+docker compose logs -f
+```
+
