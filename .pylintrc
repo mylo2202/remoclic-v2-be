@@ -1,0 +1,15 @@
+[MASTER]
+ignore=venv,.venv,node_modules
+
+[MESSAGES CONTROL]
+# Disable docstring requirements for now (C0114, C0115, C0116)
+# Disable "too few public methods" (R0903) which is common in FastAPI/Pydantic
+disable=
+    C0114,
+    C0115,
+    C0116,
+    R0903,
+    W0511
+
+[FORMAT]
+max-line-length=120
