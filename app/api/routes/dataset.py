@@ -18,11 +18,12 @@ async def read_dataset(service: DatasetService = Depends(get_dataset_service)):
 async def get_forecast(
         lat: float = Query(..., description="Latitude"),
         lng: float = Query(..., description="Longitude"),
+        ref_date: str = Query(None, description="Reference date (YYYY-MM-DD or YYYYMM)"),
         service: DatasetService = Depends(get_dataset_service)
 ):
     """Get multi-month drought forecast for a location."""
     try:
-        return service.get_forecast(lat=lat, lng=lng)
+        return service.get_forecast(lat=lat, lng=lng, ref_date_str=ref_date)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:

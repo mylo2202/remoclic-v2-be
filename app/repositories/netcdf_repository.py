@@ -1,96 +1,63 @@
 import logging
-import os
-import re
-import tempfile
-import urllib.request
-from typing import Optional
+from datetime import date
+from typing import Optional, List, Tuple
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session
 
-import requests
-import xarray as xr
-
-from app.core.config import settings
+from app.models.forecast import DroughtForecast
 
 logger = logging.getLogger(__name__)
 
 
 class NetCDFRepository:
-    """Module for abstracting data access to NetCDF files with dynamic discovery."""
+    """Module for abstracting data access to PostgreSQL drought forecast data."""
 
-    # Class-level cache for the discovered file path to avoid redundant network calls
-    _cached_file_url: Optional[str] = None
+    def __init__(self, db: Session):
+        """Initializes the repository with a database session."""
+        self.db = db
 
-    def __init__(self):
-        """Initializes the repository. No explicit file path required as it is discovered."""
-        pass
+    def get_latest_ref_date(self) -> Optional[date]:
+        """Retrieves the latest available reference date from the database."""
+        stmt = select(func.max(DroughtForecast.ref_date))
+        return self.db.execute(stmt).scalar()
 
-    def get_dataset(self) -> xr.Dataset:
+    def get_available_ref_dates(self) -> List[date]:
+        """Retrieves all unique reference dates sorted ascending."""
+        stmt = select(DroughtForecast.ref_date).distinct().order_by(DroughtForecast.ref_date.asc())
+        return list(self.db.execute(stmt).scalars().all())
+
+    def get_total_records(self) -> int:
+        """Retrieves the total number of records in the database."""
+        stmt = select(func.count(DroughtForecast.id))
+        return self.db.execute(stmt).scalar() or 0
+
+    def find_nearest_grid_point(self, lat: float, lon: float) -> Optional[Tuple[float, float]]:
         """
-        Reads and returns the NetCDF dataset. 
-        Automatically discovers the latest file URL if not already cached.
+        Finds the closest grid point coordinate (lat, lon) in the database.
+        Uses Manhattan distance for simplicity.
         """
-        file_url = self._get_latest_file_url()
+        # Query distinct coordinates to find the closest match
+        stmt = (
+            select(DroughtForecast.lat, DroughtForecast.lon)
+            .distinct()
+            .order_by(func.abs(DroughtForecast.lat - lat) + func.abs(DroughtForecast.lon - lon))
+            .limit(1)
+        )
+        result = self.db.execute(stmt).first()
+        return result if result else None
 
-        if file_url.startswith("http://") or file_url.startswith("https://"):
-            try:
-                # Try opening directly (e.g., via OPeNDAP if supported by the server)
-                return xr.open_dataset(file_url, decode_times=False)
-            except Exception as e:
-                logger.debug("Direct open failed, falling back to download: %s", e)
-                return self._download_and_open(file_url)
-        else:
-            return xr.open_dataset(file_url, decode_times=False)
-
-    def _get_latest_file_url(self) -> str:
-        """
-        Discovers the latest YYYYMM subdirectory from the base URL defined in settings.
-        Returns the full URL to the NetCDF file.
-        """
-        if NetCDFRepository._cached_file_url:
-            return NetCDFRepository._cached_file_url
-
-        base_url = settings.DATA_BASE_URL.rstrip('/')
-        file_name = settings.DATA_FILE_NAME
-
-        try:
-            logger.info("Discovering latest data directory at %s", base_url)
-            response = requests.get(base_url, timeout=10)
-            response.raise_for_status()
-
-            # Find all YYYYMM/ patterns in the directory listing
-            subdirs = re.findall(r'(\d{6})/', response.text)
-
-            if subdirs:
-                latest_subdir = sorted(subdirs)[-1]
-                NetCDFRepository._cached_file_url = f"{base_url}/{latest_subdir}/{file_name}"
-                logger.info("Discovered latest file: %s", NetCDFRepository._cached_file_url)
-                return NetCDFRepository._cached_file_url
-
-            logger.warning("No YYYYMM subdirectories found. Using default fallback.")
-        except Exception as e:
-            logger.error("Failed to discover latest data: %s. Falling back to default.", e)
-
-        # Fallback to a hardcoded default if discovery fails (e.g. 2026/03)
-        return f"{base_url}/202603/{file_name}"
-
-    def _download_and_open(self, url: str) -> xr.Dataset:
-        """Downloads the file to a temporary location and opens it with xarray."""
-        fd, temp_path = tempfile.mkstemp(suffix=".nc")
-        os.close(fd)
-
-        try:
-            logger.info("Downloading NetCDF file from %s", url)
-            urllib.request.urlretrieve(url, temp_path)
-
-            # Load data into memory so we can delete the temp file
-            ds = xr.open_dataset(temp_path, decode_times=False)
-            ds.load()
-            ds.close()
-            return ds
-        finally:
-            if os.path.exists(temp_path):
-                os.remove(temp_path)
-
-    @classmethod
-    def clear_cache(cls):
-        """Clears the discovered URL cache."""
-        cls._cached_file_url = None
+    def get_forecast_points(
+        self, lat: float, lon: float, ref_date: date, timescale: float = 1.0
+    ) -> List[DroughtForecast]:
+        """Retrieves forecast points for a given location, date, and timescale sorted by lead time."""
+        stmt = (
+            select(DroughtForecast)
+            .where(
+                DroughtForecast.lat == lat,
+                DroughtForecast.lon == lon,
+                DroughtForecast.ref_date == ref_date,
+                DroughtForecast.timescale == timescale,
+            )
+            .order_by(DroughtForecast.lead.asc())
+        )
+        return list(self.db.execute(stmt).scalars().all())
