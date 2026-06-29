@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "REMOCLIC v2"
     DATA_BASE_URL: str = "http://hpc.meteo.edu.vn/~tanpv/For_Me/562_VNU/PDF_Ope"
     DATA_FILE_NAME: str = "Dr_Prob.nc"
+    DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/remoclic"
 
     BACKEND_CORS_ORIGINS: list[str] | str = [
         "http://localhost:4200",
