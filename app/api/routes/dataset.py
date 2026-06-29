@@ -19,11 +19,12 @@ async def get_forecast(
         lat: float = Query(..., description="Latitude"),
         lng: float = Query(..., description="Longitude"),
         ref_date: str = Query(None, description="Reference date (YYYY-MM-DD or YYYYMM)"),
+        timescale: float = Query(1.0, description="Forecast timescale"),
         service: DatasetService = Depends(get_dataset_service)
 ):
     """Get multi-month drought forecast for a location."""
     try:
-        return service.get_forecast(lat=lat, lng=lng, ref_date_str=ref_date)
+        return service.get_forecast(lat=lat, lng=lng, ref_date_str=ref_date, timescale=timescale)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:

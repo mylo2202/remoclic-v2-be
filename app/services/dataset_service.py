@@ -27,7 +27,13 @@ class DatasetService:
             "variables": ["mild", "mord", "seve"]
         }
 
-    def get_forecast(self, lat: float, lng: float, ref_date_str: Optional[str] = None) -> dict:
+    def get_forecast(
+        self,
+        lat: float,
+        lng: float,
+        ref_date_str: Optional[str] = None,
+        timescale: float = 1.0,
+    ) -> dict:
         """Extract multi-month forecast for mild, mord, and seve drought levels from database."""
         # 1. Resolve ref_date
         if ref_date_str:
@@ -53,7 +59,7 @@ class DatasetService:
 
         # 3. Retrieve forecast points
         points = self.repository.get_forecast_points(
-            lat=nearest_lat, lon=nearest_lon, ref_date=ref_date, timescale=1.0
+            lat=nearest_lat, lon=nearest_lon, ref_date=ref_date, timescale=timescale
         )
 
         if not points:
