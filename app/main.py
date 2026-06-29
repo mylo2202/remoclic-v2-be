@@ -10,7 +10,7 @@ from app.services.ingestion import run_ingestion, init_db
 
 
 @asynccontextmanager
-async def lifespan():
+async def lifespan(app: FastAPI):
     # Initialize DB tables on startup
     init_db()
 
