@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter
 
-from app.api.routes import dataset
+from app.api.routes import draught
 
 api_router = APIRouter()
-api_router.include_router(dataset.router, prefix="/dataset", tags=["dataset"])
+api_router.include_router(draught.router, prefix="/draught", tags=["draught"])

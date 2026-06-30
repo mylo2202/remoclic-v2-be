@@ -122,3 +122,5 @@ cython_debug/
 # datasets
 *.nc
 Dr_Prob.nc
+*.db
+*.sqlite

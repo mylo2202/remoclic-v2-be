@@ -1,1 +1,1 @@
-from app.models.forecast import DroughtForecast
+from app.models.draught_forecast import DroughtForecast

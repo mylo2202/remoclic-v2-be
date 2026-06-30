@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, Float, Date, Index
+
 from app.core.database import Base
 
 
@@ -16,6 +17,7 @@ class DroughtForecast(Base):
     mild = Column(Float, nullable=True)
     mord = Column(Float, nullable=True)
     seve = Column(Float, nullable=True)
+    dr_ens = Column(Float, nullable=True)
 
     __table_args__ = (
         Index("idx_forecast_coords", "lat", "lon"),
