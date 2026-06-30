@@ -1,18 +1,19 @@
+import logging
+import math
 import os
 import re
-import math
-import logging
 import tempfile
 import urllib.request
 from datetime import datetime
+
 import requests
 import xarray as xr
-from sqlalchemy.orm import Session
 from sqlalchemy import select, delete
+from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import SessionLocal, engine, Base
-from app.models.forecast import DroughtForecast
+from app.models.draught_forecast import DroughtForecast
 
 logger = logging.getLogger(__name__)
 
@@ -117,6 +118,7 @@ def ingest_file(db: Session, url: str, subdir_name: str):
         da_mild = ds["mild"].transpose("timescale", "lead", "lat", "lon")
         da_mord = ds["mord"].transpose("timescale", "lead", "lat", "lon")
         da_seve = ds["seve"].transpose("timescale", "lead", "lat", "lon")
+        da_dr_ens = ds["dr_ens"].transpose("timescale", "lead", "lat", "lon")
 
         # Prepare records for bulk insert
         records = []
@@ -128,11 +130,17 @@ def ingest_file(db: Session, url: str, subdir_name: str):
                         mild_val = float(da_mild[t_idx, l_idx, lat_idx, lon_idx].values)
                         mord_val = float(da_mord[t_idx, l_idx, lat_idx, lon_idx].values)
                         seve_val = float(da_seve[t_idx, l_idx, lat_idx, lon_idx].values)
+                        dr_ens_val = float(da_dr_ens[t_idx, l_idx, lat_idx, lon_idx].values)
 
                         # Convert typical NetCDF fill values (-99.0 or NaN) to None
                         mild = mild_val if (mild_val != -99.0 and not math.isnan(mild_val)) else None
                         mord = mord_val if (mord_val != -99.0 and not math.isnan(mord_val)) else None
                         seve = seve_val if (seve_val != -99.0 and not math.isnan(seve_val)) else None
+                        dr_ens = dr_ens_val if (dr_ens_val != -99.0 and not math.isnan(dr_ens_val)) else None
+
+                        # Skip inserting records that do not contain any forecast data
+                        if mild is None and mord is None and seve is None and dr_ens is None:
+                            continue
 
                         records.append({
                             "ref_date": ref_date,
@@ -142,7 +150,8 @@ def ingest_file(db: Session, url: str, subdir_name: str):
                             "lead": int(lead),
                             "mild": mild,
                             "mord": mord,
-                            "seve": seve
+                            "seve": seve,
+                            "dr_ens": dr_ens
                         })
 
         # Bulk insert
@@ -151,7 +160,7 @@ def ingest_file(db: Session, url: str, subdir_name: str):
             # Batch size of 5000 to balance memory and roundtrips
             batch_size = 5000
             for i in range(0, len(records), batch_size):
-                db.bulk_insert_mappings(DroughtForecast, records[i:i+batch_size])
+                db.bulk_insert_mappings(DroughtForecast, records[i:i + batch_size])
             db.commit()
 
     finally:
