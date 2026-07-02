@@ -27,10 +27,9 @@ class DroughtForecastRepository:
         Finds the closest grid point coordinate (lat, lon) in the database.
         Uses Manhattan distance for simplicity.
         """
-        # Query distinct coordinates to find the closest match
+        # Query coordinates to find the closest match
         stmt = (
             select(DroughtForecast.lat, DroughtForecast.lon)
-            .distinct()
             .order_by(func.abs(DroughtForecast.lat - lat) + func.abs(DroughtForecast.lon - lon))
             .limit(1)
         )
