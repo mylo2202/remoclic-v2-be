@@ -1,5 +1,5 @@
-"""Module defining API routes for dataset operations."""
-
+from datetime import date
+from typing import List
 from fastapi import APIRouter, Depends, Query, HTTPException
 
 from app.api.dependencies import get_draught_forecast_service
@@ -40,3 +40,14 @@ async def get_event_forecast(
         raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
         raise HTTPException(status_code=500, detail="Internal server error") from e
+
+@router.get("/ref-dates", response_model=List[date])
+async def get_distinct_ref_dates(
+        service: DroughtForecastService = Depends(get_draught_forecast_service)
+):
+    """Get distinct reference dates available in the database."""
+    try:
+        return service.get_distinct_ref_dates()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal server error") from e
+

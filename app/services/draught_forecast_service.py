@@ -31,7 +31,7 @@ class DroughtForecastService:
         lng: float,
         ref_date_str: Optional[str] = None,
         timescale: float = 1.0,
-    ) -> tuple[float, float, list[str], list[DroughtForecast]]:
+    ) -> tuple[float, float, date, list[str], list[DroughtForecast]]:
         """Extract draught forecast tuple."""
         # 1. Resolve ref_date
         if ref_date_str:
@@ -69,7 +69,7 @@ class DroughtForecastService:
         leads = [p.lead for p in points]
         labels = _generate_date_labels(ref_date, leads)
 
-        return nearest_lat, nearest_lon, labels, points
+        return nearest_lat, nearest_lon, ref_date, labels, points
 
     def get_probability_forecast(
             self,
@@ -79,10 +79,12 @@ class DroughtForecastService:
             timescale: float = 1.0,
     ) -> dict:
         """Extract multi-month probability forecast for mild, mord, and seve drought levels from database."""
-        nearest_lat, nearest_lon, labels, points = self.get_draught_forecast_tuple(lat, lng, ref_date_str, timescale)
+        nearest_lat, nearest_lon, ref_date, labels, points = self.get_draught_forecast_tuple(lat, lng, ref_date_str, timescale)
 
         return {
             "location": {"lat": nearest_lat, "lng": nearest_lon},
+            "ref_date": ref_date,
+            "timescale": timescale,
             "labels": labels,
             "data": {
                 "mild": self._clean_vals([p.mild for p in points]),
@@ -99,15 +101,21 @@ class DroughtForecastService:
             timescale: float = 1.0,
     ) -> dict:
         """Extract multi-month event forecast for mild, mord, and seve drought levels from database."""
-        nearest_lat, nearest_lon, labels, points = self.get_draught_forecast_tuple(lat, lng, ref_date_str, timescale)
+        nearest_lat, nearest_lon, ref_date, labels, points = self.get_draught_forecast_tuple(lat, lng, ref_date_str, timescale)
 
         return {
             "location": {"lat": nearest_lat, "lng": nearest_lon},
+            "ref_date": ref_date,
+            "timescale": timescale,
             "labels": labels,
             "data": {
                 "dr_ens": self._clean_vals([p.dr_ens for p in points])
             }
         }
+
+    def get_distinct_ref_dates(self) -> list[date]:
+        """Retrieves all distinct reference dates from the database."""
+        return self.repository.get_distinct_ref_dates()
 
     @staticmethod
     def _clean_vals(vals) -> list[float | None]:

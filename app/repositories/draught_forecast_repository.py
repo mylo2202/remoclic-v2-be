@@ -51,3 +51,9 @@ class DroughtForecastRepository:
             .order_by(DroughtForecast.lead.asc())
         )
         return list(self.db.execute(stmt).scalars().all())
+
+    def get_distinct_ref_dates(self) -> List[date]:
+        """Retrieves all distinct reference dates from the database, sorted in descending order."""
+        stmt = select(DroughtForecast.ref_date).distinct().order_by(DroughtForecast.ref_date.desc())
+        return list(self.db.execute(stmt).scalars().all())
+
