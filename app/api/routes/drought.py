@@ -2,8 +2,8 @@ from datetime import date
 from typing import List
 from fastapi import APIRouter, Depends, Query, HTTPException
 
-from app.api.dependencies import get_draught_forecast_service
-from app.services.draught_forecast_service import DroughtForecastService
+from app.api.dependencies import get_drought_forecast_service
+from app.services.drought_forecast_service import DroughtForecastService
 
 router = APIRouter()
 
@@ -14,7 +14,7 @@ async def get_probability_forecast(
         lng: float = Query(..., description="Longitude"),
         ref_date: str = Query(None, description="Reference date (YYYY-MM-DD or YYYYMM)"),
         timescale: float = Query(1.0, description="Probability forecast timescale"),
-        service: DroughtForecastService = Depends(get_draught_forecast_service)
+        service: DroughtForecastService = Depends(get_drought_forecast_service)
 ):
     """Get multi-month drought probability forecast for a location."""
     try:
@@ -31,7 +31,7 @@ async def get_event_forecast(
         lng: float = Query(..., description="Longitude"),
         ref_date: str = Query(None, description="Reference date (YYYY-MM-DD or YYYYMM)"),
         timescale: float = Query(1.0, description="Event forecast timescale"),
-        service: DroughtForecastService = Depends(get_draught_forecast_service)
+        service: DroughtForecastService = Depends(get_drought_forecast_service)
 ):
     """Get multi-month drought event forecast for a location."""
     try:
@@ -43,7 +43,7 @@ async def get_event_forecast(
 
 @router.get("/ref-dates", response_model=List[date])
 async def get_distinct_ref_dates(
-        service: DroughtForecastService = Depends(get_draught_forecast_service)
+        service: DroughtForecastService = Depends(get_drought_forecast_service)
 ):
     """Get distinct reference dates available in the database."""
     try:

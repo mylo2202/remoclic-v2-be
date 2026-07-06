@@ -5,7 +5,7 @@ from typing import Optional, List, Tuple
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models.draught_forecast import DroughtForecast
+from app.models.drought_forecast import DroughtForecast
 
 logger = logging.getLogger(__name__)
 

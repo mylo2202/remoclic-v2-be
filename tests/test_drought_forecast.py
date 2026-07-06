@@ -1,7 +1,6 @@
 import os
 import shutil
 import sys
-from datetime import date
 from unittest.mock import patch
 
 import pytest
@@ -11,16 +10,14 @@ from sqlalchemy.orm import sessionmaker
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from app.core.database import Base
-from app.services.ingestion import ingest_file
-from app.repositories.draught_forecast_repository import DroughtForecastRepository
-from app.services.draught_forecast_service import DroughtForecastService
+from app.services.ingestion import ingest_drought_file
 
 from fastapi.testclient import TestClient
 from app.main import app
 from app.core.database import get_db
 
 # Path to the test SQLite database - we do not clean this up so the user can inspect it.
-DB_PATH = "test_draught_forecast.db"
+DB_PATH = "test_drought_forecast.db"
 DATABASE_URL = f"sqlite:///{DB_PATH}"
 
 
@@ -46,7 +43,7 @@ def db_session():
         shutil.copy(sample_nc_path, temp_path)
 
     with patch("urllib.request.urlretrieve", side_effect=mock_urlretrieve):
-        ingest_file(db, "http://example.com/202605/Dr_Prob.nc", "202605")
+        ingest_drought_file(db, "http://example.com/202605/Dr_Prob.nc", "202605")
 
     try:
         yield db
@@ -67,7 +64,7 @@ def client(db_session):
 def test_api_endpoints(client):
     # Test probability-forecast endpoint
     response = client.get(
-        "/draught/probability-forecast",
+        "/drought/probability-forecast",
         params={"lat": 13.7, "lng": 100.5, "ref_date": "202605", "timescale": 1.0}
     )
     assert response.status_code == 200
@@ -80,7 +77,7 @@ def test_api_endpoints(client):
 
     # Test event-forecast endpoint
     response = client.get(
-        "/draught/event-forecast",
+        "/drought/event-forecast",
         params={"lat": 13.7, "lng": 100.5, "ref_date": "202605", "timescale": 1.0}
     )
     assert response.status_code == 200
@@ -90,7 +87,7 @@ def test_api_endpoints(client):
     assert len(data["data"]["dr_ens"]) == 6
 
     # Test ref-dates endpoint
-    response = client.get("/draught/ref-dates")
+    response = client.get("/drought/ref-dates")
     assert response.status_code == 200
     dates = response.json()
     assert isinstance(dates, list)

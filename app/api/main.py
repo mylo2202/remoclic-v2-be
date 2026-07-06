@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter
 
-from app.api.routes import draught
+from app.api.routes import drought
 
 api_router = APIRouter()
-api_router.include_router(draught.router, prefix="/draught", tags=["draught"])
+api_router.include_router(drought.router, prefix="/drought", tags=["drought"])

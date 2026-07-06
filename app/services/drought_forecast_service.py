@@ -3,7 +3,7 @@ from datetime import datetime, date
 from typing import Optional
 
 from app.models import DroughtForecast
-from app.repositories.draught_forecast_repository import DroughtForecastRepository
+from app.repositories.drought_forecast_repository import DroughtForecastRepository
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +18,9 @@ def _generate_date_labels(ref_date: date, leads: list[int]) -> list[str]:
         labels.append(f"{new_month:02d}-{new_year}")
     return labels
 
+def _clean_vals(vals) -> list[float | None]:
+    """Rounds values and replaces placeholders/NaNs with None."""
+    return [round(float(v), 2) if (v is not None and v != -99.0) else None for v in vals]
 
 class DroughtForecastService:
     """Module providing core business logic for dataset operations using database storage."""
@@ -25,15 +28,15 @@ class DroughtForecastService:
     def __init__(self, repository: DroughtForecastRepository):
         self.repository = repository
 
-    def get_draught_forecast_tuple(
+    def get_drought_forecast_tuple(
         self,
         lat: float,
         lng: float,
         ref_date_str: Optional[str] = None,
         timescale: float = 1.0,
     ) -> tuple[float, float, date, list[str], list[DroughtForecast]]:
-        """Extract draught forecast tuple."""
-        # 1. Resolve ref_date
+        """Extract drought forecast tuple."""
+        # Resolve ref_date
         if ref_date_str:
             try:
                 # Expect YYYY-MM-DD or YYYYMM
@@ -48,14 +51,14 @@ class DroughtForecastService:
             if not ref_date:
                 raise ValueError("No probability forecast data is currently available in the database.")
 
-        # 2. Find nearest grid point
+        # Find nearest grid point
         coord = self.repository.find_nearest_grid_point(lat, lng)
         if not coord:
             raise ValueError(f"No grid coordinates found in database.")
 
         nearest_lat, nearest_lon = coord
 
-        # 3. Retrieve forecast points
+        # Retrieve forecast points
         points = self.repository.get_forecast_points(
             lat=nearest_lat, lon=nearest_lon, ref_date=ref_date, timescale=timescale
         )
@@ -65,7 +68,7 @@ class DroughtForecastService:
                 f"No forecast data found for coords ({nearest_lat}, {nearest_lon}) and date {ref_date}"
             )
 
-        # 4. Format response
+        # Format response
         leads = [p.lead for p in points]
         labels = _generate_date_labels(ref_date, leads)
 
@@ -79,7 +82,7 @@ class DroughtForecastService:
             timescale: float = 1.0,
     ) -> dict:
         """Extract multi-month probability forecast for mild, mord, and seve drought levels from database."""
-        nearest_lat, nearest_lon, ref_date, labels, points = self.get_draught_forecast_tuple(lat, lng, ref_date_str, timescale)
+        nearest_lat, nearest_lon, ref_date, labels, points = self.get_drought_forecast_tuple(lat, lng, ref_date_str, timescale)
 
         return {
             "location": {"lat": nearest_lat, "lng": nearest_lon},
@@ -87,9 +90,9 @@ class DroughtForecastService:
             "timescale": timescale,
             "labels": labels,
             "data": {
-                "mild": self._clean_vals([p.mild for p in points]),
-                "mord": self._clean_vals([p.mord for p in points]),
-                "seve": self._clean_vals([p.seve for p in points])
+                "mild": _clean_vals([p.mild for p in points]),
+                "mord": _clean_vals([p.mord for p in points]),
+                "seve": _clean_vals([p.seve for p in points])
             }
         }
 
@@ -101,7 +104,7 @@ class DroughtForecastService:
             timescale: float = 1.0,
     ) -> dict:
         """Extract multi-month event forecast for mild, mord, and seve drought levels from database."""
-        nearest_lat, nearest_lon, ref_date, labels, points = self.get_draught_forecast_tuple(lat, lng, ref_date_str, timescale)
+        nearest_lat, nearest_lon, ref_date, labels, points = self.get_drought_forecast_tuple(lat, lng, ref_date_str, timescale)
 
         return {
             "location": {"lat": nearest_lat, "lng": nearest_lon},
@@ -109,15 +112,10 @@ class DroughtForecastService:
             "timescale": timescale,
             "labels": labels,
             "data": {
-                "dr_ens": self._clean_vals([p.dr_ens for p in points])
+                "dr_ens": _clean_vals([p.dr_ens for p in points])
             }
         }
 
     def get_distinct_ref_dates(self) -> list[date]:
         """Retrieves all distinct reference dates from the database."""
         return self.repository.get_distinct_ref_dates()
-
-    @staticmethod
-    def _clean_vals(vals) -> list[float | None]:
-        """Rounds values and replaces placeholders/NaNs with None."""
-        return [round(float(v), 2) if (v is not None and v != -99.0) else None for v in vals]
