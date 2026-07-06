@@ -139,3 +139,7 @@ class PrT2ForecastService:
                 "t2_fcs": _clean_vals([p.t2_fcs for p in points])
             }
         }
+
+    def get_distinct_ref_dates(self) -> list[date]:
+        """Retrieves all distinct reference dates from the database."""
+        return self.repository.get_distinct_ref_dates()
