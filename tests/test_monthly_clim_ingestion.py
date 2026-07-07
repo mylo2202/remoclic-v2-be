@@ -96,10 +96,11 @@ def test_monthly_clim_ingestion_skips_unchanged_file(db_session):
             self.headers = headers
             self.ok = True
 
-        def raise_for_status(self):
+        @staticmethod
+        def raise_for_status():
             return None
 
-    def mock_head(_url, allow_redirects=True, timeout=None):
+    def mock_head(_url):
         return DummyHeadResponse({
             "ETag": "\"fake-etag\"",
             "Last-Modified": "Tue, 01 Jan 2030 00:00:00 GMT",
@@ -108,7 +109,7 @@ def test_monthly_clim_ingestion_skips_unchanged_file(db_session):
     def mock_urlretrieve(_url, temp_path):
         shutil.copy(sample_nc_path, temp_path)
 
-    with patch("app.services.ingestion.requests.head", side_effect=mock_head) as mock_head_fn:
+    with patch("app.services.ingestion.requests.head", side_effect=mock_head):
         with patch("urllib.request.urlretrieve", side_effect=mock_urlretrieve) as mock_url_fn:
             first_result = ingest_monthly_clim_file(db_session, url)
             assert first_result is True
