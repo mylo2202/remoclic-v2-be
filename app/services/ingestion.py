@@ -15,6 +15,8 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.database import SessionLocal, engine, Base
 from app.models.drought_forecast import DroughtForecast
+from app.models.monthly_clim_model import MonthlyClimModel
+from app.models.monthly_clim_observed import MonthlyClimObserved
 from app.models.pr_t2_forecast import PrT2Forecast
 
 logger = logging.getLogger(__name__)
@@ -133,7 +135,7 @@ def ingest_drought_file(db: Session, url: str, subdir_name: str):
                         dr_ens = dr_ens_val if (dr_ens_val != -99.0 and not math.isnan(dr_ens_val)) else None
 
                         # Skip inserting records that do not contain any forecast data
-                        if mild is None and mord is None and seve is None and dr_ens is None:
+                        if mild is None or mord is None or seve is None or dr_ens is None:
                             continue
 
                         records.append({
@@ -160,6 +162,7 @@ def ingest_drought_file(db: Session, url: str, subdir_name: str):
     finally:
         if os.path.exists(temp_path):
             os.remove(temp_path)
+
 
 def run_pr_t2_ingestion():
     """
@@ -271,9 +274,8 @@ def ingest_pr_t2_file(db: Session, url: str, subdir_name: str):
                     pr_fcs = pr_fcs_val if (pr_fcs_val != -99.0 and not math.isnan(pr_fcs_val)) else None
                     t2_fcs = t2_fcs_val if (t2_fcs_val != -99.0 and not math.isnan(t2_fcs_val)) else None
 
-
                     # Skip inserting records that do not contain any forecast data
-                    if pr is None and t2 is None and pr_ano is None and t2_ano is None and pr_fcs is None and t2_fcs is None:
+                    if pr is None or t2 is None or pr_ano is None or t2_ano is None or pr_fcs is None or t2_fcs is None:
                         continue
 
                     records.append({
@@ -317,3 +319,113 @@ def parse_ref_date(ref_date_attr: Any | None, subdir_name: str) -> date:
         ref_date = datetime.strptime(subdir_name, "%Y%m").date()
     return ref_date
 
+
+def run_monthly_clim_ingestion():
+    """
+    Main ingestion task for monthly climatological model and observed datasets.
+    """
+    init_db()
+    db: Session = SessionLocal()
+    try:
+        file_url = f"{settings.MONTHLY_CLIM_DATA_URL.rstrip('/')}/{settings.MONTHLY_CLIM_DATA_FILE_NAME}"
+        logger.info("Processing monthly climate file: %s", file_url)
+        ingest_monthly_clim_file(db, file_url)
+        logger.info("Successfully ingested monthly climate file")
+    except Exception as e:
+        db.rollback()
+        logger.error("Failed to ingest monthly climate file: %s", e, exc_info=True)
+    finally:
+        db.close()
+
+
+def ingest_monthly_clim_file(db: Session, url: str):
+    """Downloads a single NetCDF file, parses it, and bulk inserts into DB."""
+    fd, temp_path = tempfile.mkstemp(suffix=".nc")
+    os.close(fd)
+
+    try:
+        logger.info("Downloading temp file from %s", url)
+        urllib.request.urlretrieve(url, temp_path)
+
+        # Open and load dataset
+        ds = xr.open_dataset(temp_path, decode_times=False)
+        ds.load()
+        ds.close()
+
+        # Clear existing monthly climate data before ingesting the new file.
+        db.execute(delete(MonthlyClimModel))
+        db.execute(delete(MonthlyClimObserved))
+        db.commit()
+
+        months = ds["month"].values
+        leads = ds["lead"].values
+        lats = ds["lat"].values
+        lons = ds["lon"].values
+
+        da_pr_m = ds["pr_m"].transpose("month", "lead", "lat", "lon")
+        da_t2_m = ds["t2_m"].transpose("month", "lead", "lat", "lon")
+        da_pr_o = ds["pr_o"].transpose("month", "lat", "lon")
+        da_t2_o = ds["t2_o"].transpose("month", "lat", "lon")
+
+        model_records = []
+        observed_records = []
+
+        for m_idx, month in enumerate(months):
+            for l_idx, lead in enumerate(leads):
+                for lat_idx, lat in enumerate(lats):
+                    for lon_idx, lon in enumerate(lons):
+                        pr_m_val = float(da_pr_m[m_idx, l_idx, lat_idx, lon_idx].values)
+                        t2_m_val = float(da_t2_m[m_idx, l_idx, lat_idx, lon_idx].values)
+
+                        pr_m = pr_m_val if (pr_m_val != -99.0 and pr_m_val != 0.0 and not math.isnan(pr_m_val)) else None
+                        t2_m = t2_m_val if (t2_m_val != -99.0 and t2_m_val != 0.0 and not math.isnan(t2_m_val)) else None
+
+                        if pr_m is None or t2_m is None:
+                            continue
+
+                        model_records.append({
+                            "month": int(month),
+                            "lead": int(lead),
+                            "lat": float(lat),
+                            "lon": float(lon),
+                            "pr_m": pr_m,
+                            "t2_m": t2_m,
+                        })
+
+        for m_idx, month in enumerate(months):
+            for lat_idx, lat in enumerate(lats):
+                for lon_idx, lon in enumerate(lons):
+                    pr_o_val = float(da_pr_o[m_idx, lat_idx, lon_idx].values)
+                    t2_o_val = float(da_t2_o[m_idx, lat_idx, lon_idx].values)
+
+                    pr_o = pr_o_val if (pr_o_val != -99.0 and pr_o_val != 0.0 and not math.isnan(pr_o_val)) else None
+                    t2_o = t2_o_val if (t2_o_val != -99.0 and t2_o_val != 0.0 and not math.isnan(t2_o_val)) else None
+
+                    if pr_o is None or t2_o is None:
+                        continue
+
+                    observed_records.append({
+                        "month": int(month),
+                        "lat": float(lat),
+                        "lon": float(lon),
+                        "pr_o": pr_o,
+                        "t2_o": t2_o,
+                    })
+
+        if model_records:
+            logger.info("Inserting %d model records", len(model_records))
+            batch_size = 5000
+            for i in range(0, len(model_records), batch_size):
+                db.bulk_insert_mappings(MonthlyClimModel, model_records[i:i + batch_size])
+            db.commit()
+
+        if observed_records:
+            logger.info("Inserting %d observed records", len(observed_records))
+            batch_size = 5000
+            for i in range(0, len(observed_records), batch_size):
+                db.bulk_insert_mappings(MonthlyClimObserved, observed_records[i:i + batch_size])
+            db.commit()
+
+    finally:
+        if os.path.exists(temp_path):
+            os.remove(temp_path)

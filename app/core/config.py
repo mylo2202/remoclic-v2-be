@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     DROUGHT_DATA_FILE_NAME: str = "Dr_Prob.nc"
     PR_T2_DATA_URL: str = "http://hpc.meteo.edu.vn/~tanpv/For_Me/562_VNU/PDF_Ope"
     PR_T2_DATA_FILE_NAME: str = "Forecast_Ope_Pr_T2_and_Anomaly.nc"
+    MONTHLY_CLIM_DATA_URL: str = "http://hpc.meteo.edu.vn/~tanpv/For_Me/Dr_VN_Ope/DATA/Cli_Out"
+    MONTHLY_CLIM_DATA_FILE_NAME: str = "Monthly_Clim.nc"
     DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/remoclic"
 
     BACKEND_CORS_ORIGINS: list[str] | str = [
