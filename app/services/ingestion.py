@@ -1,3 +1,4 @@
+import hashlib
 import logging
 import math
 import os
@@ -17,6 +18,7 @@ from app.core.database import SessionLocal, engine, Base
 from app.models.drought_forecast import DroughtForecast
 from app.models.monthly_clim_model import MonthlyClimModel
 from app.models.monthly_clim_observed import MonthlyClimObserved
+from app.models.monthly_clim_ingestion_state import MonthlyClimIngestionState
 from app.models.pr_t2_forecast import PrT2Forecast
 
 logger = logging.getLogger(__name__)
@@ -338,14 +340,86 @@ def run_monthly_clim_ingestion():
         db.close()
 
 
-def ingest_monthly_clim_file(db: Session, url: str):
+def compute_sha256_checksum(file_path: str) -> str:
+    hash_sha256 = hashlib.sha256()
+    with open(file_path, "rb") as f:
+        for chunk in iter(lambda: f.read(8192), b""):
+            hash_sha256.update(chunk)
+    return hash_sha256.hexdigest()
+
+
+def get_remote_file_metadata(url: str) -> tuple[str | None, str | None]:
+    try:
+        response = requests.head(url, allow_redirects=True, timeout=15)
+        response.raise_for_status()
+        headers = response.headers
+        return headers.get("ETag"), headers.get("Last-Modified")
+    except Exception as e:
+        logger.warning("Unable to fetch remote metadata for %s: %s", url, e)
+        return None, None
+
+
+def get_monthly_clim_state(db: Session, file_name: str):
+    return db.execute(
+        select(MonthlyClimIngestionState).where(MonthlyClimIngestionState.file_name == file_name)
+    ).scalars().one_or_none()
+
+
+def upsert_monthly_clim_state(
+    db: Session,
+    file_name: str,
+    source_url: str,
+    etag: str | None,
+    last_modified: str | None,
+    checksum: str,
+):
+    state = get_monthly_clim_state(db, file_name)
+    if state:
+        state.source_url = source_url
+        state.etag = etag
+        state.last_modified = last_modified
+        state.checksum = checksum
+        state.ingested_at = datetime.utcnow()
+        db.add(state)
+    else:
+        db.add(MonthlyClimIngestionState(
+            file_name=file_name,
+            source_url=source_url,
+            etag=etag,
+            last_modified=last_modified,
+            checksum=checksum,
+            ingested_at=datetime.utcnow(),
+        ))
+    db.commit()
+
+
+def ingest_monthly_clim_file(db: Session, url: str) -> bool:
     """Downloads a single NetCDF file, parses it, and bulk inserts into DB."""
+    file_name = os.path.basename(url)
+    etag, last_modified = get_remote_file_metadata(url)
+    existing_state = get_monthly_clim_state(db, file_name)
+
+    if existing_state:
+        if (etag and existing_state.etag and etag == existing_state.etag) or (
+            last_modified and existing_state.last_modified and last_modified == existing_state.last_modified
+        ):
+            logger.info(
+                "Monthly climate file %s unchanged by remote metadata, skipping ingestion.",
+                file_name,
+            )
+            return False
+
     fd, temp_path = tempfile.mkstemp(suffix=".nc")
     os.close(fd)
 
     try:
         logger.info("Downloading temp file from %s", url)
         urllib.request.urlretrieve(url, temp_path)
+
+        checksum = compute_sha256_checksum(temp_path)
+        if existing_state and existing_state.checksum == checksum:
+            logger.info("Monthly climate file %s unchanged by checksum, skipping ingestion.", file_name)
+            return False
 
         # Open and load dataset
         ds = xr.open_dataset(temp_path, decode_times=False)
@@ -425,6 +499,17 @@ def ingest_monthly_clim_file(db: Session, url: str):
             for i in range(0, len(observed_records), batch_size):
                 db.bulk_insert_mappings(MonthlyClimObserved, observed_records[i:i + batch_size])
             db.commit()
+
+        upsert_monthly_clim_state(
+            db,
+            file_name=file_name,
+            source_url=url,
+            etag=etag,
+            last_modified=last_modified,
+            checksum=checksum,
+        )
+
+        return True
 
     finally:
         if os.path.exists(temp_path):

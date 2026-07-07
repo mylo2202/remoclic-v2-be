@@ -12,6 +12,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 from app.core.database import Base
 from app.models.monthly_clim_model import MonthlyClimModel
 from app.models.monthly_clim_observed import MonthlyClimObserved
+from app.models.monthly_clim_ingestion_state import MonthlyClimIngestionState
 from app.services.ingestion import ingest_monthly_clim_file
 
 DB_PATH = "test_monthly_clim_ingestion.db"
@@ -84,3 +85,39 @@ def test_monthly_clim_ingestion_clears_previous_data(db_session):
 
     assert first_model_count == second_model_count
     assert first_model_count > 0
+
+
+def test_monthly_clim_ingestion_skips_unchanged_file(db_session):
+    sample_nc_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../samples/Monthly_Clim.nc"))
+    url = "http://example.com/Monthly_Clim.nc"
+
+    class DummyHeadResponse:
+        def __init__(self, headers):
+            self.headers = headers
+            self.ok = True
+
+        def raise_for_status(self):
+            return None
+
+    def mock_head(_url, allow_redirects=True, timeout=None):
+        return DummyHeadResponse({
+            "ETag": "\"fake-etag\"",
+            "Last-Modified": "Tue, 01 Jan 2030 00:00:00 GMT",
+        })
+
+    def mock_urlretrieve(_url, temp_path):
+        shutil.copy(sample_nc_path, temp_path)
+
+    with patch("app.services.ingestion.requests.head", side_effect=mock_head) as mock_head_fn:
+        with patch("urllib.request.urlretrieve", side_effect=mock_urlretrieve) as mock_url_fn:
+            first_result = ingest_monthly_clim_file(db_session, url)
+            assert first_result is True
+            state = db_session.query(MonthlyClimIngestionState).filter_by(file_name="Monthly_Clim.nc").one_or_none()
+            assert state is not None
+            assert state.etag == "\"fake-etag\""
+            assert state.last_modified == "Tue, 01 Jan 2030 00:00:00 GMT"
+
+            mock_url_fn.reset_mock()
+            second_result = ingest_monthly_clim_file(db_session, url)
+            assert second_result is False
+            mock_url_fn.assert_not_called()
