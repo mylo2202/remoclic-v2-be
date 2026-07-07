@@ -11,12 +11,12 @@ from sqlalchemy.orm import sessionmaker
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from app.core.database import Base
-from app.services.ingestion import ingest_file
-from app.repositories.draught_forecast_repository import DroughtForecastRepository
-from app.services.draught_forecast_service import DroughtForecastService
+from app.services.ingestion import ingest_drought_file
+from app.repositories.drought_forecast_repository import DroughtForecastRepository
+from app.services.drought_forecast_service import DroughtForecastService
 
 # Path to the test SQLite database
-DB_PATH = "test_draught_forecast.db"
+DB_PATH = "test_drought_ingestion.db"
 DATABASE_URL = f"sqlite:///{DB_PATH}"
 
 
@@ -38,7 +38,7 @@ def db_session():
         db.close()
 
 
-def test_ingestion_and_forecast(db_session):
+def test_drought_ingestion_and_forecast(db_session):
     sample_nc_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../samples/Dr_Prob.nc"))
 
     # Mock urllib.request.urlretrieve to copy the local sample file instead of downloading
@@ -47,7 +47,7 @@ def test_ingestion_and_forecast(db_session):
 
     with patch("urllib.request.urlretrieve", side_effect=mock_urlretrieve):
         # Ingest the file using a dummy URL and subdir name
-        ingest_file(db_session, "http://example.com/202605/Dr_Prob.nc", "202605")
+        ingest_drought_file(db_session, "http://example.com/202605/Dr_Prob.nc", "202605")
 
     # Verify that data was ingested
     repository = DroughtForecastRepository(db_session)
