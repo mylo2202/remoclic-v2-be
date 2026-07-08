@@ -25,11 +25,11 @@ def db_session():
         os.remove(DB_PATH)
 
     engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
-    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    testing_session_local = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
     Base.metadata.create_all(bind=engine)
 
-    db = TestingSessionLocal()
+    db = testing_session_local()
     try:
         yield db
     finally:

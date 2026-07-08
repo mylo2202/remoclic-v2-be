@@ -27,12 +27,12 @@ def db_session():
         os.remove(DB_PATH)
 
     engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
-    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    testing_session_local = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
     # Create tables
     Base.metadata.create_all(bind=engine)
 
-    db = TestingSessionLocal()
+    db = testing_session_local()
 
     # Ingest test data so the API has something to query
     sample_nc_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../samples/Monthly_Clim.nc"))

@@ -151,9 +151,9 @@ def ingest_monthly_clim_file(db: Session, url: str) -> bool:
                         t2_m_val = float(da_t2_m[m_idx, l_idx, lat_idx, lon_idx].values)
 
                         pr_m = pr_m_val if (
-                                    pr_m_val != -99.0 and pr_m_val != 0.0 and not math.isnan(pr_m_val)) else None
+                                pr_m_val != -99.0 and pr_m_val != 0.0 and not math.isnan(pr_m_val)) else None
                         t2_m = t2_m_val if (
-                                    t2_m_val != -99.0 and t2_m_val != 0.0 and not math.isnan(t2_m_val)) else None
+                                t2_m_val != -99.0 and t2_m_val != 0.0 and not math.isnan(t2_m_val)) else None
 
                         if pr_m is None or t2_m is None:
                             continue
