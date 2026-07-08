@@ -52,6 +52,9 @@ class PrT2ForecastService:
             if not ref_date:
                 raise ValueError("No precipitation and temperature forecast data is currently available in the database.")
 
+        if not self.repository.is_ref_date_active(ref_date):
+            raise ValueError(f"Reference date {ref_date} is temporarily unavailable.")
+
         # Find nearest grid point
         coord = self.repository.find_nearest_grid_point(lat, lng)
         if not coord:
@@ -140,6 +143,13 @@ class PrT2ForecastService:
             }
         }
 
-    def get_distinct_ref_dates(self) -> list[date]:
-        """Retrieves all distinct reference dates from the database."""
-        return self.repository.get_distinct_ref_dates()
+    def get_active_ref_dates(self) -> list[date]:
+        """Retrieves all active reference dates from the database."""
+        return self.repository.get_active_ref_dates()
+
+    def set_ref_date_status(self, ref_date_str: str, is_active: bool) -> None:
+        """Enable or disable a PR/T2 reference date for public API access."""
+        try:
+            self.repository.set_ref_date_status(ref_date_str, is_active)
+        except ValueError as e:
+            raise ValueError(f"Invalid reference date format: {ref_date_str}") from e

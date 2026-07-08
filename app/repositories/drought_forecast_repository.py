@@ -1,33 +1,36 @@
 import logging
-from datetime import date
+from datetime import date, datetime
 from typing import Optional, List, Tuple
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models.drought_forecast import DroughtForecast
+from app.models.drought_ref_date import DroughtRefDate
 
 logger = logging.getLogger(__name__)
 
 
 class DroughtForecastRepository:
-    """Module for abstracting data access to PostgreSQL drought forecast data."""
-
     def __init__(self, db: Session):
-        """Initializes the repository with a database session."""
         self.db = db
 
     def get_latest_ref_date(self) -> Optional[date]:
-        """Retrieves the latest available reference date from the database."""
-        stmt = select(func.max(DroughtForecast.ref_date))
+        stmt = (
+            select(DroughtForecast.ref_date)
+            .join(
+                DroughtRefDate,
+                DroughtRefDate.ref_date == DroughtForecast.ref_date,
+                isouter=True,
+            )
+            .where((DroughtRefDate.is_active.is_(True)) | (DroughtRefDate.id.is_(None)))
+            .distinct()
+            .order_by(DroughtForecast.ref_date.desc())
+            .limit(1)
+        )
         return self.db.execute(stmt).scalar()
 
     def find_nearest_grid_point(self, lat: float, lon: float) -> Optional[Tuple[float, float]]:
-        """
-        Finds the closest grid point coordinate (lat, lon) in the database.
-        Uses Manhattan distance for simplicity.
-        """
-        # Query coordinates to find the closest match
         stmt = (
             select(DroughtForecast.lat, DroughtForecast.lon)
             .order_by(func.abs(DroughtForecast.lat - lat) + func.abs(DroughtForecast.lon - lon))
@@ -36,24 +39,56 @@ class DroughtForecastRepository:
         result = self.db.execute(stmt).first()
         return result if result else None
 
-    def get_forecast_points(
-        self, lat: float, lon: float, ref_date: date, timescale: float = 1.0
-    ) -> List[DroughtForecast]:
-        """Retrieves  forecast points for a given location, date, and timescale sorted by lead time."""
+    def get_forecast_points(self, lat: float, lon: float, ref_date: date, timescale: float = 1.0) -> List[DroughtForecast]:
         stmt = (
             select(DroughtForecast)
+            .join(
+                DroughtRefDate,
+                DroughtRefDate.ref_date == DroughtForecast.ref_date,
+                isouter=True,
+            )
             .where(
                 DroughtForecast.lat == lat,
                 DroughtForecast.lon == lon,
                 DroughtForecast.ref_date == ref_date,
                 DroughtForecast.timescale == timescale,
+                ((DroughtRefDate.is_active.is_(True)) | (DroughtRefDate.id.is_(None))),
             )
             .order_by(DroughtForecast.lead.asc())
         )
         return list(self.db.execute(stmt).scalars().all())
 
-    def get_distinct_ref_dates(self) -> List[date]:
-        """Retrieves all distinct reference dates from the database, sorted in descending order."""
-        stmt = select(DroughtForecast.ref_date).distinct().order_by(DroughtForecast.ref_date.desc())
+    def get_active_ref_dates(self) -> List[date]:
+        stmt = (
+            select(DroughtRefDate.ref_date)
+            .where(DroughtRefDate.is_active.is_(True))
+            .order_by(DroughtRefDate.ref_date.desc())
+        )
         return list(self.db.execute(stmt).scalars().all())
 
+    def set_ref_date_status(self, ref_date: date | str, is_active: bool) -> None:
+        if isinstance(ref_date, str):
+            ref_date = (
+                datetime.strptime(ref_date, "%Y-%m-%d").date()
+                if "-" in ref_date
+                else datetime.strptime(ref_date, "%Y%m").date()
+            )
+
+        status = self.db.execute(
+            select(DroughtRefDate).where(DroughtRefDate.ref_date == ref_date)
+        ).scalars().one_or_none()
+
+        if status is None:
+            status = DroughtRefDate(ref_date=ref_date, is_active=is_active)
+            self.db.add(status)
+        else:
+            status.is_active = is_active
+            self.db.add(status)
+
+        self.db.commit()
+
+    def is_ref_date_active(self, ref_date: date) -> bool:
+        status = self.db.execute(
+            select(DroughtRefDate).where(DroughtRefDate.ref_date == ref_date)
+        ).scalars().one_or_none()
+        return status is None or status.is_active

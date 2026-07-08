@@ -26,3 +26,8 @@ def get_db() -> Generator:
         yield db
     finally:
         db.close()
+
+def init_db() -> None:
+    """Create database tables if they do not already exist."""
+    logger.info("Initializing database tables...")
+    Base.metadata.create_all(bind=engine)

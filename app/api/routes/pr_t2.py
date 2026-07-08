@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.api.dependencies import get_pr_t2_forecast_service
 from app.services.pr_t2_forecast_service import PrT2ForecastService
+from request_models import PrT2RefDateToggleRequest
 
 router = APIRouter()
 
@@ -58,11 +59,26 @@ async def get_combined_forecast(
 
 
 @router.get("/ref-dates", response_model=List[date])
-async def get_distinct_ref_dates(
+async def get_active_ref_dates(
     service: PrT2ForecastService = Depends(get_pr_t2_forecast_service),
 ):
-    """Get distinct reference dates available in the database."""
+    """Get active reference dates exposed to clients."""
     try:
-        return service.get_distinct_ref_dates()
+        return service.get_active_ref_dates()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal server error") from e
+
+
+@router.post("/ref-dates/toggle")
+async def toggle_ref_date_status(
+    payload: PrT2RefDateToggleRequest,
+    service: PrT2ForecastService = Depends(get_pr_t2_forecast_service),
+):
+    """Enable or disable a PR/T2 reference date for public API access."""
+    try:
+        service.set_ref_date_status(payload.ref_date, payload.is_active)
+        return {"ref_date": payload.ref_date, "is_active": payload.is_active}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
         raise HTTPException(status_code=500, detail="Internal server error") from e
