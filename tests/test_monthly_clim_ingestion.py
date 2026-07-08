@@ -13,7 +13,7 @@ from app.core.database import Base
 from app.models.monthly_clim_model import MonthlyClimModel
 from app.models.monthly_clim_observed import MonthlyClimObserved
 from app.models.monthly_clim_ingestion_state import MonthlyClimIngestionState
-from app.services.ingestion import ingest_monthly_clim_file
+from app.services.monthly_clim_ingestion_service import ingest_monthly_clim_file
 
 DB_PATH = "test_monthly_clim_ingestion.db"
 DATABASE_URL = f"sqlite:///{DB_PATH}"

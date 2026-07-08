@@ -11,7 +11,7 @@ from sqlalchemy.orm import sessionmaker
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from app.core.database import Base
-from app.services.ingestion import ingest_drought_file
+from app.services.drought_ingestion_service import ingest_drought_file
 from app.repositories.drought_forecast_repository import DroughtForecastRepository
 from app.services.drought_forecast_service import DroughtForecastService
 

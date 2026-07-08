@@ -9,7 +9,6 @@ logger = logging.getLogger(__name__)
 
 
 def _generate_date_labels(ref_date: date, leads: list[int]) -> list[str]:
-    """Generates human-readable labels from reference date and lead offsets."""
     labels = []
     for lead in leads:
         months_to_add = int(lead)
@@ -18,28 +17,18 @@ def _generate_date_labels(ref_date: date, leads: list[int]) -> list[str]:
         labels.append(f"{new_month:02d}-{new_year}")
     return labels
 
+
 def _clean_vals(vals) -> list[float | None]:
-    """Rounds values and replaces placeholders/NaNs with None."""
     return [round(float(v), 2) if (v is not None and v != -99.0) else None for v in vals]
 
-class DroughtForecastService:
-    """Module providing core business logic for dataset operations using database storage."""
 
+class DroughtForecastService:
     def __init__(self, repository: DroughtForecastRepository):
         self.repository = repository
 
-    def get_drought_forecast_tuple(
-        self,
-        lat: float,
-        lng: float,
-        ref_date_str: Optional[str] = None,
-        timescale: float = 1.0,
-    ) -> tuple[float, float, date, list[str], list[DroughtForecast]]:
-        """Extract drought forecast tuple."""
-        # Resolve ref_date
+    def get_drought_forecast_tuple(self, lat: float, lng: float, ref_date_str: Optional[str] = None, timescale: float = 1.0):
         if ref_date_str:
             try:
-                # Expect YYYY-MM-DD or YYYYMM
                 if "-" in ref_date_str:
                     ref_date = datetime.strptime(ref_date_str, "%Y-%m-%d").date()
                 else:
@@ -51,39 +40,24 @@ class DroughtForecastService:
             if not ref_date:
                 raise ValueError("No probability forecast data is currently available in the database.")
 
-        # Find nearest grid point
+        if not self.repository.is_ref_date_active(ref_date):
+            raise ValueError(f"Reference date {ref_date} is temporarily unavailable.")
+
         coord = self.repository.find_nearest_grid_point(lat, lng)
         if not coord:
-            raise ValueError(f"No grid coordinates found in database.")
+            raise ValueError("No grid coordinates found in database.")
 
         nearest_lat, nearest_lon = coord
-
-        # Retrieve forecast points
-        points = self.repository.get_forecast_points(
-            lat=nearest_lat, lon=nearest_lon, ref_date=ref_date, timescale=timescale
-        )
+        points = self.repository.get_forecast_points(lat=nearest_lat, lon=nearest_lon, ref_date=ref_date, timescale=timescale)
 
         if not points:
-            raise ValueError(
-                f"No forecast data found for coords ({nearest_lat}, {nearest_lon}) and date {ref_date}"
-            )
+            raise ValueError(f"No forecast data found for coords ({nearest_lat}, {nearest_lon}) and date {ref_date}")
 
-        # Format response
-        leads = [p.lead for p in points]
-        labels = _generate_date_labels(ref_date, leads)
-
+        labels = _generate_date_labels(ref_date, [p.lead for p in points])
         return nearest_lat, nearest_lon, ref_date, labels, points
 
-    def get_probability_forecast(
-            self,
-            lat: float,
-            lng: float,
-            ref_date_str: Optional[str] = None,
-            timescale: float = 1.0,
-    ) -> dict:
-        """Extract multi-month probability forecast for mild, mord, and seve drought levels from database."""
+    def get_probability_forecast(self, lat: float, lng: float, ref_date_str: Optional[str] = None, timescale: float = 1.0) -> dict:
         nearest_lat, nearest_lon, ref_date, labels, points = self.get_drought_forecast_tuple(lat, lng, ref_date_str, timescale)
-
         return {
             "location": {"lat": nearest_lat, "lng": nearest_lon},
             "ref_date": ref_date,
@@ -92,30 +66,27 @@ class DroughtForecastService:
             "data": {
                 "mild": _clean_vals([p.mild for p in points]),
                 "mord": _clean_vals([p.mord for p in points]),
-                "seve": _clean_vals([p.seve for p in points])
-            }
+                "seve": _clean_vals([p.seve for p in points]),
+            },
         }
 
-    def get_event_forecast(
-            self,
-            lat: float,
-            lng: float,
-            ref_date_str: Optional[str] = None,
-            timescale: float = 1.0,
-    ) -> dict:
-        """Extract multi-month event forecast for mild, mord, and seve drought levels from database."""
+    def get_event_forecast(self, lat: float, lng: float, ref_date_str: Optional[str] = None, timescale: float = 1.0) -> dict:
         nearest_lat, nearest_lon, ref_date, labels, points = self.get_drought_forecast_tuple(lat, lng, ref_date_str, timescale)
-
         return {
             "location": {"lat": nearest_lat, "lng": nearest_lon},
             "ref_date": ref_date,
             "timescale": timescale,
             "labels": labels,
             "data": {
-                "dr_ens": _clean_vals([p.dr_ens for p in points])
-            }
+                "dr_ens": _clean_vals([p.dr_ens for p in points]),
+            },
         }
 
     def get_distinct_ref_dates(self) -> list[date]:
-        """Retrieves all distinct reference dates from the database."""
-        return self.repository.get_distinct_ref_dates()
+        return self.repository.get_active_ref_dates()
+
+    def set_ref_date_status(self, ref_date_str: str, is_active: bool) -> None:
+        try:
+            self.repository.set_ref_date_status(ref_date_str, is_active)
+        except ValueError as e:
+            raise ValueError(f"Invalid reference date format: {ref_date_str}") from e
