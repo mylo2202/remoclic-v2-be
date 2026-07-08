@@ -4,7 +4,7 @@ from app.repositories.monthly_clim_repository import MonthlyClimRepository
 
 logger = logging.getLogger(__name__)
 
-MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+MONTH_LABELS = ["T01", "T02", "T03", "T04", "T05", "T06", "T07", "T08", "T09", "T10", "T11", "T12"]
 
 
 def _clean_vals(vals) -> list[float | None]:
