@@ -20,6 +20,6 @@ class DroughtForecast(Base):
     dr_ens = Column(Float, nullable=True)
 
     __table_args__ = (
-        Index("idx_forecast_coords", "lat", "lon"),
-        Index("idx_forecast_query", "lat", "lon", "ref_date"),
+        Index("idx_drought_forecast_coords", "lat", "lon"),
+        Index("idx_drought_forecast_query", "lat", "lon", "ref_date"),
     )

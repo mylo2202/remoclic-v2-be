@@ -11,7 +11,7 @@ from sqlalchemy.orm import sessionmaker
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from app.core.database import Base
-from app.services.ingestion import ingest_drought_file
+from app.services.drought_ingestion_service import ingest_drought_file
 from app.repositories.drought_forecast_repository import DroughtForecastRepository
 from app.services.drought_forecast_service import DroughtForecastService
 
@@ -26,12 +26,12 @@ def db_session():
         os.remove(DB_PATH)
 
     engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
-    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    testing_session_local = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
     # Create tables
     Base.metadata.create_all(bind=engine)
 
-    db = TestingSessionLocal()
+    db = testing_session_local()
     try:
         yield db
     finally:

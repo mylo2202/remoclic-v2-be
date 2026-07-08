@@ -11,7 +11,7 @@ from sqlalchemy.orm import sessionmaker
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from app.core.database import Base
-from app.services.ingestion import ingest_pr_t2_file
+from app.services.pr_t2_ingestion_service import ingest_pr_t2_file
 from app.repositories.pr_t2_forecast_repository import PrT2ForecastRepository
 from app.services.pr_t2_forecast_service import PrT2ForecastService
 
@@ -26,12 +26,12 @@ def db_session():
         os.remove(DB_PATH)
 
     engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
-    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    testing_session_local = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
     # Create tables
     Base.metadata.create_all(bind=engine)
 
-    db = TestingSessionLocal()
+    db = testing_session_local()
     try:
         yield db
     finally:
@@ -131,7 +131,7 @@ def test_pr_t2_nearest_grid_point(db_session):
         assert isinstance(nearest[1], float)
 
 
-def test_pr_t2_distinct_ref_dates(db_session):
+def test_pr_t2_active_ref_dates(db_session):
     """Test retrieving all distinct reference dates."""
     sample_nc_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../samples/Forecast_Ope_Pr_T2_and_Anomaly.nc"))
 
@@ -142,10 +142,10 @@ def test_pr_t2_distinct_ref_dates(db_session):
         ingest_pr_t2_file(db_session, "http://example.com/202605/Forecast_Ope_Pr_T2_and_Anomaly.nc", "202605")
 
     repository = PrT2ForecastRepository(db_session)
-    distinct_dates = repository.get_distinct_ref_dates()
+    active_ref_dates = repository.get_active_ref_dates()
 
-    assert len(distinct_dates) > 0
-    assert date(2026, 5, 1) in distinct_dates
+    assert len(active_ref_dates) > 0
+    assert date(2026, 5, 1) in active_ref_dates
 
 
 def test_pr_t2_forecast_by_ref_date_string(db_session):

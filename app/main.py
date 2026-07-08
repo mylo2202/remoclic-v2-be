@@ -1,16 +1,31 @@
+import logging
 from contextlib import asynccontextmanager
 from datetime import datetime
+
+from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from apscheduler.schedulers.background import BackgroundScheduler
 
-from app.api.main import api_router
+from app.api.main_router import api_router
 from app.core.config import settings
-from app.services.ingestion import run_drought_ingestion, run_pr_t2_ingestion, run_monthly_clim_ingestion, init_db
+from app.core.database import init_db
+from app.services.drought_ingestion_service import run_drought_ingestion
+from app.services.monthly_clim_ingestion_service import run_monthly_clim_ingestion
+from app.services.pr_t2_ingestion_service import run_pr_t2_ingestion
+
+# Configure root logging based on app settings
+logging.basicConfig(
+    level=settings.LOG_LEVEL,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(fastapi_app: FastAPI):
+    logger.info(fastapi_app.title)
+
     # Initialize DB tables on startup
     init_db()
 

@@ -10,7 +10,8 @@ from sqlalchemy.orm import sessionmaker
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from app.core.database import Base
-from app.services.ingestion import ingest_pr_t2_file
+from app.repositories.pr_t2_forecast_repository import PrT2ForecastRepository
+from app.services.pr_t2_ingestion_service import ingest_pr_t2_file
 
 from fastapi.testclient import TestClient
 from app.main import app
@@ -28,12 +29,12 @@ def db_session():
         os.remove(DB_PATH)
 
     engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
-    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    testing_session_local = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
     # Create tables
     Base.metadata.create_all(bind=engine)
 
-    db = TestingSessionLocal()
+    db = testing_session_local()
 
     # Ingest test data so the API has something to query
     sample_nc_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../samples/Forecast_Ope_Pr_T2_and_Anomaly.nc"))
@@ -96,3 +97,20 @@ def test_pr_t2_api_endpoints(client, db_session):
     ref_dates = ref_dates_response.json()
     assert isinstance(ref_dates, list)
     assert len(ref_dates) > 0
+
+
+def test_disabled_ref_date_is_excluded_from_api(client, db_session):
+    """Disabled reference dates should be hidden from the API and rejected for retrieval."""
+    repository = PrT2ForecastRepository(db_session)
+    repository.set_ref_date_status("2026-05-01", is_active=False)
+
+    disabled_request = client.get(
+        "/pr-t2/precipitation-forecast",
+        params={"lat": 13.7, "lng": 100.5, "ref_date": "202605"},
+    )
+    assert disabled_request.status_code == 400
+
+    ref_dates_response = client.get("/pr-t2/ref-dates")
+    assert ref_dates_response.status_code == 200
+    ref_dates = ref_dates_response.json()
+    assert "2026-05-01" not in ref_dates

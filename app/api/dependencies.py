@@ -5,11 +5,11 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.repositories.drought_forecast_repository import DroughtForecastRepository
+from app.repositories.monthly_clim_repository import MonthlyClimRepository
 from app.repositories.pr_t2_forecast_repository import PrT2ForecastRepository
 from app.services.drought_forecast_service import DroughtForecastService
-from app.services.pr_t2_forecast_service import PrT2ForecastService
-from app.repositories.monthly_clim_repository import MonthlyClimRepository
 from app.services.monthly_clim_service import MonthlyClimService
+from app.services.pr_t2_forecast_service import PrT2ForecastService
 
 
 def get_drought_forecast_repository(db: Session = Depends(get_db)) -> DroughtForecastRepository:
