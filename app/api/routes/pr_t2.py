@@ -4,18 +4,18 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.api.dependencies import get_pr_t2_forecast_service
+from app.request_models.pr_t2_ref_date_toggle_request import PrT2RefDateToggleRequest
 from app.services.pr_t2_forecast_service import PrT2ForecastService
-from request_models import PrT2RefDateToggleRequest
 
 router = APIRouter()
 
 
 @router.get("/precipitation-forecast")
 async def get_precipitation_forecast(
-    lat: float = Query(..., description="Latitude"),
-    lng: float = Query(..., description="Longitude"),
-    ref_date: str = Query(None, description="Reference date (YYYY-MM-DD or YYYYMM)"),
-    service: PrT2ForecastService = Depends(get_pr_t2_forecast_service),
+        lat: float = Query(..., description="Latitude"),
+        lng: float = Query(..., description="Longitude"),
+        ref_date: str = Query(None, description="Reference date (YYYY-MM-DD or YYYYMM)"),
+        service: PrT2ForecastService = Depends(get_pr_t2_forecast_service),
 ):
     """Get multi-month precipitation forecast for a location."""
     try:
@@ -28,10 +28,10 @@ async def get_precipitation_forecast(
 
 @router.get("/temperature-forecast")
 async def get_temperature_forecast(
-    lat: float = Query(..., description="Latitude"),
-    lng: float = Query(..., description="Longitude"),
-    ref_date: str = Query(None, description="Reference date (YYYY-MM-DD or YYYYMM)"),
-    service: PrT2ForecastService = Depends(get_pr_t2_forecast_service),
+        lat: float = Query(..., description="Latitude"),
+        lng: float = Query(..., description="Longitude"),
+        ref_date: str = Query(None, description="Reference date (YYYY-MM-DD or YYYYMM)"),
+        service: PrT2ForecastService = Depends(get_pr_t2_forecast_service),
 ):
     """Get multi-month temperature forecast for a location."""
     try:
@@ -44,10 +44,10 @@ async def get_temperature_forecast(
 
 @router.get("/combined-forecast")
 async def get_combined_forecast(
-    lat: float = Query(..., description="Latitude"),
-    lng: float = Query(..., description="Longitude"),
-    ref_date: str = Query(None, description="Reference date (YYYY-MM-DD or YYYYMM)"),
-    service: PrT2ForecastService = Depends(get_pr_t2_forecast_service),
+        lat: float = Query(..., description="Latitude"),
+        lng: float = Query(..., description="Longitude"),
+        ref_date: str = Query(None, description="Reference date (YYYY-MM-DD or YYYYMM)"),
+        service: PrT2ForecastService = Depends(get_pr_t2_forecast_service),
 ):
     """Get combined precipitation and temperature forecast for a location."""
     try:
@@ -60,7 +60,7 @@ async def get_combined_forecast(
 
 @router.get("/ref-dates", response_model=List[date])
 async def get_active_ref_dates(
-    service: PrT2ForecastService = Depends(get_pr_t2_forecast_service),
+        service: PrT2ForecastService = Depends(get_pr_t2_forecast_service),
 ):
     """Get active reference dates exposed to clients."""
     try:
@@ -71,8 +71,8 @@ async def get_active_ref_dates(
 
 @router.post("/ref-dates/toggle")
 async def toggle_ref_date_status(
-    payload: PrT2RefDateToggleRequest,
-    service: PrT2ForecastService = Depends(get_pr_t2_forecast_service),
+        payload: PrT2RefDateToggleRequest,
+        service: PrT2ForecastService = Depends(get_pr_t2_forecast_service),
 ):
     """Enable or disable a PR/T2 reference date for public API access."""
     try:

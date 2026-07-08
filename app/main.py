@@ -7,10 +7,10 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.main_router import api_router
 from app.core.config import settings
+from app.core.database import init_db
 from app.services.drought_ingestion_service import run_drought_ingestion
 from app.services.monthly_clim_ingestion_service import run_monthly_clim_ingestion
 from app.services.pr_t2_ingestion_service import run_pr_t2_ingestion
-from core.database import init_db
 
 
 @asynccontextmanager

@@ -8,9 +8,9 @@ router = APIRouter()
 
 @router.get("/observed")
 async def get_monthly_observed(
-    lat: float = Query(..., description="Latitude"),
-    lng: float = Query(..., description="Longitude"),
-    service: MonthlyClimService = Depends(get_monthly_clim_service),
+        lat: float = Query(..., description="Latitude"),
+        lng: float = Query(..., description="Longitude"),
+        service: MonthlyClimService = Depends(get_monthly_clim_service),
 ):
     try:
         return service.get_observed_monthly(lat=lat, lng=lng)
@@ -22,10 +22,10 @@ async def get_monthly_observed(
 
 @router.get("/model")
 async def get_monthly_model(
-    lat: float = Query(..., description="Latitude"),
-    lng: float = Query(..., description="Longitude"),
-    lead: int = Query(..., description="Lead offset (months)"),
-    service: MonthlyClimService = Depends(get_monthly_clim_service),
+        lat: float = Query(..., description="Latitude"),
+        lng: float = Query(..., description="Longitude"),
+        lead: int = Query(..., description="Lead offset (months)"),
+        service: MonthlyClimService = Depends(get_monthly_clim_service),
 ):
     try:
         return service.get_model_monthly(lat=lat, lng=lng, lead=lead)

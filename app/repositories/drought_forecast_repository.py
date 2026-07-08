@@ -39,7 +39,8 @@ class DroughtForecastRepository:
         result = self.db.execute(stmt).first()
         return result if result else None
 
-    def get_forecast_points(self, lat: float, lon: float, ref_date: date, timescale: float = 1.0) -> List[DroughtForecast]:
+    def get_forecast_points(self, lat: float, lon: float, ref_date: date, timescale: float = 1.0) -> List[
+        DroughtForecast]:
         stmt = (
             select(DroughtForecast)
             .join(
@@ -73,6 +74,12 @@ class DroughtForecastRepository:
                 if "-" in ref_date
                 else datetime.strptime(ref_date, "%Y%m").date()
             )
+
+        # Check if reference date exists in forecast data
+        exists_stmt = select(DroughtForecast.ref_date).where(DroughtForecast.ref_date == ref_date).limit(1)
+        ref_exists = self.db.execute(exists_stmt).scalar()
+        if not ref_exists:
+            raise ValueError(f"Reference date {ref_date} does not exist in forecast data.")
 
         status = self.db.execute(
             select(DroughtRefDate).where(DroughtRefDate.ref_date == ref_date)

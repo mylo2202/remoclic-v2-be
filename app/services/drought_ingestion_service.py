@@ -13,15 +13,12 @@ from sqlalchemy import select, delete
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.core.database import SessionLocal
-from app.models.drought_forecast import DroughtForecast
-from core.database import init_db
-
 from app.core.database import SessionLocal, init_db
 from app.models.drought_forecast import DroughtForecast
 from app.models.drought_ref_date import DroughtRefDate
 
 logger = logging.getLogger(__name__)
+
 
 def run_drought_ingestion():
     """
@@ -165,6 +162,7 @@ def ingest_drought_file(db: Session, url: str, subdir_name: str):
     finally:
         if os.path.exists(temp_path):
             os.remove(temp_path)
+
 
 def parse_ref_date(ref_date_attr: Any | None, subdir_name: str) -> date:
     if ref_date_attr:

@@ -14,11 +14,12 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import SessionLocal
+from app.core.database import init_db
 from app.models.pr_t2_forecast import PrT2Forecast
 from app.models.pr_t2_ref_date import PrT2RefDate
-from core.database import init_db
 
 logger = logging.getLogger(__name__)
+
 
 def run_pr_t2_ingestion():
     """

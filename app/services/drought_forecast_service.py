@@ -2,7 +2,6 @@ import logging
 from datetime import datetime, date
 from typing import Optional
 
-from app.models import DroughtForecast
 from app.repositories.drought_forecast_repository import DroughtForecastRepository
 
 logger = logging.getLogger(__name__)
@@ -26,7 +25,8 @@ class DroughtForecastService:
     def __init__(self, repository: DroughtForecastRepository):
         self.repository = repository
 
-    def get_drought_forecast_tuple(self, lat: float, lng: float, ref_date_str: Optional[str] = None, timescale: float = 1.0):
+    def get_drought_forecast_tuple(self, lat: float, lng: float, ref_date_str: Optional[str] = None,
+                                   timescale: float = 1.0):
         if ref_date_str:
             try:
                 if "-" in ref_date_str:
@@ -48,7 +48,8 @@ class DroughtForecastService:
             raise ValueError("No grid coordinates found in database.")
 
         nearest_lat, nearest_lon = coord
-        points = self.repository.get_forecast_points(lat=nearest_lat, lon=nearest_lon, ref_date=ref_date, timescale=timescale)
+        points = self.repository.get_forecast_points(lat=nearest_lat, lon=nearest_lon, ref_date=ref_date,
+                                                     timescale=timescale)
 
         if not points:
             raise ValueError(f"No forecast data found for coords ({nearest_lat}, {nearest_lon}) and date {ref_date}")
@@ -56,8 +57,10 @@ class DroughtForecastService:
         labels = _generate_date_labels(ref_date, [p.lead for p in points])
         return nearest_lat, nearest_lon, ref_date, labels, points
 
-    def get_probability_forecast(self, lat: float, lng: float, ref_date_str: Optional[str] = None, timescale: float = 1.0) -> dict:
-        nearest_lat, nearest_lon, ref_date, labels, points = self.get_drought_forecast_tuple(lat, lng, ref_date_str, timescale)
+    def get_probability_forecast(self, lat: float, lng: float, ref_date_str: Optional[str] = None,
+                                 timescale: float = 1.0) -> dict:
+        nearest_lat, nearest_lon, ref_date, labels, points = self.get_drought_forecast_tuple(lat, lng, ref_date_str,
+                                                                                             timescale)
         return {
             "location": {"lat": nearest_lat, "lng": nearest_lon},
             "ref_date": ref_date,
@@ -70,8 +73,10 @@ class DroughtForecastService:
             },
         }
 
-    def get_event_forecast(self, lat: float, lng: float, ref_date_str: Optional[str] = None, timescale: float = 1.0) -> dict:
-        nearest_lat, nearest_lon, ref_date, labels, points = self.get_drought_forecast_tuple(lat, lng, ref_date_str, timescale)
+    def get_event_forecast(self, lat: float, lng: float, ref_date_str: Optional[str] = None,
+                           timescale: float = 1.0) -> dict:
+        nearest_lat, nearest_lon, ref_date, labels, points = self.get_drought_forecast_tuple(lat, lng, ref_date_str,
+                                                                                             timescale)
         return {
             "location": {"lat": nearest_lat, "lng": nearest_lon},
             "ref_date": ref_date,

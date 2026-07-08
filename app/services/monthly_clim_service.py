@@ -4,7 +4,6 @@ from app.repositories.monthly_clim_repository import MonthlyClimRepository
 
 logger = logging.getLogger(__name__)
 
-
 MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
 
@@ -45,7 +44,8 @@ class MonthlyClimService:
         nearest_lat, nearest_lon = self._resolve_nearest(lat, lng)
         points = self.repository.get_model_points(nearest_lat, nearest_lon, lead)
         if not points:
-            raise ValueError(f"No model monthly climatology found for coords ({nearest_lat}, {nearest_lon}) and lead {lead}")
+            raise ValueError(
+                f"No model monthly climatology found for coords ({nearest_lat}, {nearest_lon}) and lead {lead}")
 
         pr_m = _clean_vals([p.pr_m for p in points])
         t2_m = _clean_vals([p.t2_m for p in points])

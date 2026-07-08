@@ -1,5 +1,6 @@
 import logging
 from typing import Generator
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
@@ -26,6 +27,7 @@ def get_db() -> Generator:
         yield db
     finally:
         db.close()
+
 
 def init_db() -> None:
     """Create database tables if they do not already exist."""

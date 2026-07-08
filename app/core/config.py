@@ -40,4 +40,5 @@ class Settings(BaseSettings):
             return json.loads(v)
         return v
 
+
 settings = Settings()

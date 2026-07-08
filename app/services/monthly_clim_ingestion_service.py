@@ -13,12 +13,13 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import SessionLocal
-from core.database import init_db
+from app.core.database import init_db
+from app.models.monthly_clim_ingestion_state import MonthlyClimIngestionState
 from app.models.monthly_clim_model import MonthlyClimModel
 from app.models.monthly_clim_observed import MonthlyClimObserved
-from app.models.monthly_clim_ingestion_state import MonthlyClimIngestionState
 
 logger = logging.getLogger(__name__)
+
 
 def run_monthly_clim_ingestion():
     """
@@ -64,12 +65,12 @@ def get_monthly_clim_state(db: Session, file_name: str):
 
 
 def upsert_monthly_clim_state(
-    db: Session,
-    file_name: str,
-    source_url: str,
-    etag: str | None,
-    last_modified: str | None,
-    checksum: str,
+        db: Session,
+        file_name: str,
+        source_url: str,
+        etag: str | None,
+        last_modified: str | None,
+        checksum: str,
 ):
     state = get_monthly_clim_state(db, file_name)
     if state:
@@ -99,7 +100,7 @@ def ingest_monthly_clim_file(db: Session, url: str) -> bool:
 
     if existing_state:
         if (etag and existing_state.etag and etag == existing_state.etag) or (
-            last_modified and existing_state.last_modified and last_modified == existing_state.last_modified
+                last_modified and existing_state.last_modified and last_modified == existing_state.last_modified
         ):
             logger.info(
                 "Monthly climate file %s unchanged by remote metadata, skipping ingestion.",
@@ -149,8 +150,10 @@ def ingest_monthly_clim_file(db: Session, url: str) -> bool:
                         pr_m_val = float(da_pr_m[m_idx, l_idx, lat_idx, lon_idx].values)
                         t2_m_val = float(da_t2_m[m_idx, l_idx, lat_idx, lon_idx].values)
 
-                        pr_m = pr_m_val if (pr_m_val != -99.0 and pr_m_val != 0.0 and not math.isnan(pr_m_val)) else None
-                        t2_m = t2_m_val if (t2_m_val != -99.0 and t2_m_val != 0.0 and not math.isnan(t2_m_val)) else None
+                        pr_m = pr_m_val if (
+                                    pr_m_val != -99.0 and pr_m_val != 0.0 and not math.isnan(pr_m_val)) else None
+                        t2_m = t2_m_val if (
+                                    t2_m_val != -99.0 and t2_m_val != 0.0 and not math.isnan(t2_m_val)) else None
 
                         if pr_m is None or t2_m is None:
                             continue

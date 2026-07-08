@@ -49,7 +49,7 @@ class PrT2ForecastRepository:
         return result if result else None
 
     def get_forecast_points(
-        self, lat: float, lon: float, ref_date: date
+            self, lat: float, lon: float, ref_date: date
     ) -> List[PrT2Forecast]:
         """Retrieves forecast points for a given location, date sorted by lead time."""
         stmt = (
@@ -81,7 +81,14 @@ class PrT2ForecastRepository:
     def set_ref_date_status(self, ref_date: date | str, is_active: bool) -> None:
         """Marks a reference date as active or inactive for API use."""
         if isinstance(ref_date, str):
-            ref_date = datetime.strptime(ref_date, "%Y-%m-%d").date() if "-" in ref_date else datetime.strptime(ref_date, "%Y%m").date()
+            ref_date = datetime.strptime(ref_date, "%Y-%m-%d").date() if "-" in ref_date else datetime.strptime(
+                ref_date, "%Y%m").date()
+
+        # Check if reference date exists in forecast data
+        exists_stmt = select(PrT2Forecast.ref_date).where(PrT2Forecast.ref_date == ref_date).limit(1)
+        ref_exists = self.db.execute(exists_stmt).scalar()
+        if not ref_exists:
+            raise ValueError(f"Reference date {ref_date} does not exist in forecast data.")
 
         status = self.db.execute(
             select(PrT2RefDate).where(PrT2RefDate.ref_date == ref_date)
@@ -106,4 +113,3 @@ class PrT2ForecastRepository:
     def set_ref_date_active(self, ref_date: date) -> None:
         """Marks a reference date as active."""
         self.set_ref_date_status(ref_date, is_active=True)
-

@@ -31,10 +31,10 @@ class PrT2ForecastService:
         self.repository = repository
 
     def get_pr_t2_forecast_tuple(
-        self,
-        lat: float,
-        lng: float,
-        ref_date_str: Optional[str] = None,
+            self,
+            lat: float,
+            lng: float,
+            ref_date_str: Optional[str] = None,
     ) -> tuple[float, float, date, list[str], list[PrT2Forecast]]:
         """Extract precipitation and temperature forecast tuple."""
         # Resolve ref_date
@@ -50,7 +50,8 @@ class PrT2ForecastService:
         else:
             ref_date = self.repository.get_latest_ref_date()
             if not ref_date:
-                raise ValueError("No precipitation and temperature forecast data is currently available in the database.")
+                raise ValueError(
+                    "No precipitation and temperature forecast data is currently available in the database.")
 
         if not self.repository.is_ref_date_active(ref_date):
             raise ValueError(f"Reference date {ref_date} is temporarily unavailable.")
@@ -79,10 +80,10 @@ class PrT2ForecastService:
         return nearest_lat, nearest_lon, ref_date, labels, points
 
     def get_precipitation_forecast(
-        self,
-        lat: float,
-        lng: float,
-        ref_date_str: Optional[str] = None,
+            self,
+            lat: float,
+            lng: float,
+            ref_date_str: Optional[str] = None,
     ) -> dict:
         """Extract multi-month precipitation forecast (pr, pr_ano, pr_fcs) from database."""
         nearest_lat, nearest_lon, ref_date, labels, points = self.get_pr_t2_forecast_tuple(lat, lng, ref_date_str)
@@ -99,10 +100,10 @@ class PrT2ForecastService:
         }
 
     def get_temperature_forecast(
-        self,
-        lat: float,
-        lng: float,
-        ref_date_str: Optional[str] = None,
+            self,
+            lat: float,
+            lng: float,
+            ref_date_str: Optional[str] = None,
     ) -> dict:
         """Extract multi-month temperature forecast (t2, t2_ano, t2_fcs) from database."""
         nearest_lat, nearest_lon, ref_date, labels, points = self.get_pr_t2_forecast_tuple(lat, lng, ref_date_str)
@@ -119,10 +120,10 @@ class PrT2ForecastService:
         }
 
     def get_combined_forecast(
-        self,
-        lat: float,
-        lng: float,
-        ref_date_str: Optional[str] = None,
+            self,
+            lat: float,
+            lng: float,
+            ref_date_str: Optional[str] = None,
     ) -> dict:
         """Extract combined precipitation and temperature forecast from database."""
         nearest_lat, nearest_lon, ref_date, labels, points = self.get_pr_t2_forecast_tuple(lat, lng, ref_date_str)
