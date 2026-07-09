@@ -94,7 +94,7 @@ class PrT2ForecastService:
             "labels": labels,
             "data": {
                 "pr": _clean_vals([p.pr for p in points]),
-                "pr_ano": _clean_vals([p.pr_ano for p in points]),
+                "pr_ano": _clean_vals([p.pr_ano * 100 for p in points]),
                 "pr_fcs": _clean_vals([p.pr_fcs for p in points])
             }
         }
